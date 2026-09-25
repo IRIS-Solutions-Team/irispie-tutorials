@@ -26,7 +26,7 @@ from irispie import Simultaneous, Databox, qq
 
 That import line is the same in every tutorial in this series.
 
-## 1 · What we are building
+## What we are building
 
 Three equations. They are the smallest set that still behaves like a real
 macro model.
@@ -44,7 +44,7 @@ Three variables, three shocks, nine parameters. Notice that `y` depends on
 *next* quarter's inflation — the model looks forward as well as back, which is
 what makes it interesting to solve.
 
-## 2 · Write the model
+## Write the model
 
 A model is text. You can keep it in a `.model` file, but for a tutorial a
 Python string is easier to read alongside the code.
@@ -101,7 +101,7 @@ Four things to notice in that text:
   later.
 - Every equation ends with a **semicolon**.
 
-## 3 · Parse it
+## Parse it
 
 ```{code-cell} ipython3
 m = Simultaneous.from_string(SOURCE, linear=True, flat=True)
@@ -129,7 +129,7 @@ m.get_names()
 Everything the model knows about, in one list. You did not write `std_shk_y` —
 IrisPie added a standard deviation for every shock automatically.
 
-## 4 · Give it parameters
+## Give it parameters
 
 The model has structure but no numbers yet. Before doing anything else, ask
 what is still missing:
@@ -165,7 +165,7 @@ silently ignores a name the model does not have, so a typo costs you an hour.
 `assign_strict` tells you immediately. You will see exactly this in
 *Break it* below.
 
-## 5 · Find the steady state
+## Find the steady state
 
 The steady state is where the economy settles when nothing disturbs it. Solve
 for it:
@@ -197,7 +197,7 @@ m.check_steady()
 questions — "did the solver finish" and "is the answer correct" — and it is
 worth asking both.
 
-## 6 · Solve it
+## Solve it
 
 Because `y` depends on next quarter's inflation, you cannot simply step the
 model forward quarter by quarter. It has to be solved first.
@@ -226,7 +226,7 @@ holds or not, and you only discover the problem when your simulation refuses
 to settle down. Counting eigenvalues here is the check. Tutorial 9 is entirely
 about what to do when the count is wrong.
 
-## 7 · Build the input data
+## Build the input data
 
 A simulation needs a span of time and a starting point.
 
@@ -266,7 +266,7 @@ db["pi"]
 Every quarter sits at 2, the steady state. That is the flat baseline you are
 about to disturb.
 
-## 8 · Shock it
+## Shock it
 
 One line. In the first quarter of 2026, demand comes in one percentage point
 stronger than expected:
@@ -286,7 +286,7 @@ out
 `simulate` takes the input databox and the span, and returns a new databox.
 The input is not modified.
 
-## 9 · Read the answer
+## Read the answer
 
 ```{code-cell} ipython3
 out["y"]
