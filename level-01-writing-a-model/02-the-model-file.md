@@ -231,34 +231,32 @@ PRODUCTIVITY = """
 ```
 
 ```{code-cell} ipython3
-ma = Simultaneous.from_string(PRODUCTIVITY, linear=False, flat=True)
-ma.assign_strict(rho=0.8, a_ss=100)
-```
-
-Note `linear=False`. That equation has a power and an exponential in it, so it
-is genuinely nonlinear, and saying otherwise would be a lie. Tutorial 5 covers
-the flags properly, including what IrisPie does when you tell it one that is
-not true.
-
-A nonlinear solver needs somewhere to start. Give it the answer you expect:
-
-```{code-cell} ipython3
-ma.assign(a=100)
+ma = Simultaneous.from_string(PRODUCTIVITY, linear=True, flat=True)
+ma.assign_strict(rho=0.8, a_ss=1)
 ma.steady()
-```
-
-Those iteration tables are the nonlinear solver working. Tutorial 1 never
-showed them because a linear model is solved in one step.
-
-```{code-cell} ipython3
 ma.get_steady_levels()
 ```
+
+Productivity is an **index**, so its steady state is `1` rather than some
+arbitrary number of units. That is the usual convention for a variable whose
+level has no natural scale, and it is what lets the whole thing stay linear:
+the equation has a power and an exponential in it, but in logs it is
+`log(a) = (1-rho)*log(a_ss) + rho*log(a{-1}) + shk_a`, which is a straight
+line.
 
 ```{code-cell} ipython3
 ma.get_log_status()
 ```
 
-`a` is flagged as a log variable; everything else would show `False`.
+`True` for `a`. Compare the main model, where nothing was declared:
+
+```{code-cell} ipython3
+m.get_log_status()
+```
+
+Three `False`s. This is the quick way to check a model you did not write:
+`get_log_status()` tells you which variables are read in percentages and which
+are read in units.
 
 Now the part that matters. Shock it by `0.01` and watch what that means:
 
@@ -273,9 +271,9 @@ out = ma.simulate(db, span)
 out["a"]
 ```
 
-Productivity goes from 100 to about **101.005** — a **one percent** rise, not
-a rise of 0.01 units. For a log variable the shock is proportional. That is
-the whole point: the same shock means the same percentage whatever the level.
+Productivity goes from 1 to about **1.01005** — a **one percent** rise, not a
+rise of 0.01 units. For a log variable the shock is proportional. That is the
+whole point: the same shock means the same percentage whatever the level.
 
 ## ⚠️ Break it
 
@@ -385,8 +383,12 @@ m.is_linear, m.is_flat
 Add a second lag to the policy rule, so the central bank looks two quarters
 back as well as one:
 
-```
-i = c1*i{-1} + c1b*i{-2} + (1-c1-c1b)*(pi_tar + r_ss + c2*(pi - pi_tar) + c3*y) + shk_i;
+```{code-cell} ipython3
+NEW_RULE = (
+    "i = c1*i{-1} + c1b*i{-2} + (1-c1-c1b)"
+    "*(pi_tar + r_ss + c2*(pi - pi_tar) + c3*y) + shk_i;"
+)
+print(NEW_RULE)
 ```
 
 Declare the new parameter `c1b`, set it to `0.2` and reduce `c1` to `0.4` so
@@ -405,11 +407,7 @@ Before you run it, predict: what will `max_lag` be, and what will
 <br>
 
 `max_lag` becomes **−2**, and `get_initials()` grows from three entries to
-four:
-
-```
-['y[-1]', 'pi[-1]', 'i[-1]', 'i[-2]']
-```
+four: `['y[-1]', 'pi[-1]', 'i[-1]', 'i[-2]']`.
 
 Only `i` gains a second entry, because only `i` is now used two quarters back.
 
