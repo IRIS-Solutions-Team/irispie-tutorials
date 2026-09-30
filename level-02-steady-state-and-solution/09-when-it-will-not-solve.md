@@ -196,18 +196,18 @@ RANDOM_WALK = """
 
 """
 
-walk = Simultaneous.from_string(RANDOM_WALK, linear=True, flat=True)
-walk.assign_strict(**CALIB)
-walk.steady()
-walk.solve_first_order()
+random_walk = Simultaneous.from_string(RANDOM_WALK, linear=True, flat=True)
+random_walk.assign_strict(**CALIB)
+random_walk.steady()
+random_walk.solve_first_order()
 
-walk.get_eigenvalues_stability()
+random_walk.get_eigenvalues_stability()
 ```
 
 `UNIT_ROOT`, and the root itself is exactly one:
 
 ```{code-cell} ipython3
-walk.get_eigenvalues(kind=ip.UNIT)
+random_walk.get_eigenvalues(kind=ip.UNIT)
 ```
 
 This is not a failure. `g = g{-1} + shk_g` says potential growth has no level
@@ -219,7 +219,7 @@ What changes is that the variable is **non-stationary**, and there is a call
 that tells you which ones are:
 
 ```{code-cell} ipython3
-walk.get_variable_stability()
+random_walk.get_variable_stability()
 ```
 
 `False` for `g`, `True` for everything else. That matters for tutorial 10 —
@@ -271,16 +271,16 @@ and so encourages exactly the demand that caused the inflation. Economists
 call this a violation of the Taylor principle.
 
 ```{code-cell} ipython3
-loose = build(c2=0.5)
+weak_policy = build(c2=0.5)
 ```
 
 No error. No warning. It solved.
 
 ```{code-cell} ipython3
-levels = dict(loose.get_steady_levels())
+levels = dict(weak_policy.get_steady_levels())
 
 print("steady levels:", {k: round(float(v), 6) for k, v in levels.items()})
-print("check_steady :", loose.check_steady(when_fails="silent"))
+print("check_steady :", weak_policy.check_steady(when_fails="silent"))
 ```
 
 And the steady state is **perfect** — `y = 0`, `pi = 2`, `i = 3`, the same
@@ -290,14 +290,14 @@ all. `check_steady()` says `True` and is right to.
 Now count the roots:
 
 ```{code-cell} ipython3
-print("stability:", loose.get_eigenvalues_stability())
-print("unstable :", len(loose.get_eigenvalues(kind=ip.UNSTABLE)),
-      " forward-looking:", count_forward_looking(loose))
+print("stability:", weak_policy.get_eigenvalues_stability())
+print("unstable :", len(weak_policy.get_eigenvalues(kind=ip.UNSTABLE)),
+      " forward-looking:", count_forward_looking(weak_policy))
 ```
 
 **Two unstable roots, one forward-looking variable.** Two explosive
 directions and one free jump to cancel them with, so no stable solution
-exists. The matrices in `loose` are a perfectly good answer to the linear
+exists. The matrices in `weak_policy` are a perfectly good answer to the linear
 algebra; they are just not an answer to any economic question, and the root
 count is the only step that separates the two.
 
@@ -306,10 +306,10 @@ Simulate with it:
 ```{code-cell} ipython3
 SPAN = qq(2025,1) >> qq(2035,4)
 
-db = Databox.steady(loose, SPAN)
+db = Databox.steady(weak_policy, SPAN)
 db["shk_y"][qq(2026,1)] = 1.0
 
-path = loose.simulate(db, SPAN)["y"].get_data()[:, 0]
+path = weak_policy.simulate(db, SPAN)["y"].get_data()[:, 0]
 
 print("first quarters:", np.round(path[1:6], 4))
 print("final value:   ", f"{float(path[-1]):.4e}")
@@ -322,7 +322,7 @@ completion, raised nothing, and every figure in it is noise.
 You can see it coming in the solution matrix itself, if you look:
 
 ```{code-cell} ipython3
-np.round(np.asarray(loose.get_solution().T), 4)
+np.round(np.asarray(weak_policy.get_solution().T), 4)
 ```
 
 Entries of 9.6 and 7.7 in a matrix that gets applied once per quarter. The
@@ -335,10 +335,10 @@ the only thing standing between you and results like these.
 
 `get_variable_stability()` answers one question well — which variables carry
 a unit root — and it is tempting to promote it into a general health check.
-Ask it about `loose`, the model from the last section:
+Ask it about `weak_policy`, the model from the last section:
 
 ```{code-cell} ipython3
-loose.get_variable_stability()
+weak_policy.get_variable_stability()
 ```
 
 **All `True`** — on the model that simulates to 10^28.
@@ -347,7 +347,7 @@ The two questions are genuinely different. `get_variable_stability()` asks
 *"does this variable wander off permanently?"*, which is about unit roots.
 Blanchard–Kahn asks *"does a solution exist?"*, which is about the count of
 unstable roots. A model can be perfectly stationary and have no solution, and
-that is precisely what `loose` is.
+that is precisely what `weak_policy` is.
 
 Only the root count answers the second question.
 
@@ -362,7 +362,7 @@ The first is silent. Take a variable that grows by a fixed amount forever, in
 a model declared flat:
 
 ```{code-cell} ipython3
-NO_REST = """
+CONSTANT_DRIFT = """
 
 !transition-variables
     x
@@ -375,11 +375,11 @@ NO_REST = """
 
 """
 
-drifter = Simultaneous.from_string(NO_REST, linear=True, flat=True)
-drifter.steady()
+drift = Simultaneous.from_string(CONSTANT_DRIFT, linear=True, flat=True)
+drift.steady()
 
-print("steady level:", float(drifter.get_steady_levels()["x"]))
-print("check_steady:", drifter.check_steady(when_fails="silent"))
+print("steady level:", float(drift.get_steady_levels()["x"]))
+print("check_steady:", drift.check_steady(when_fails="silent"))
 ```
 
 There is no value of `x` satisfying `x = x + 1`. The solver returned **zero**
@@ -391,7 +391,7 @@ exist.
 The second failure is loud. Ask for something with no real solution at all:
 
 ```{code-cell} ipython3
-IMPOSSIBLE = """
+NO_REAL_SOLUTION = """
 
 !transition-variables
     x
@@ -406,12 +406,12 @@ IMPOSSIBLE = """
 
 import contextlib
 
-hopeless = Simultaneous.from_string(IMPOSSIBLE, linear=False, flat=True)
+unsolvable = Simultaneous.from_string(NO_REAL_SOLUTION, linear=False, flat=True)
 
 try:
     # the solver prints every iteration, and it takes a great many of them
     with contextlib.redirect_stdout(io.StringIO()):
-        hopeless.steady()
+        unsolvable.steady()
 except Exception as error:
     print(type(error).__module__ + "." + type(error).__name__)
     print(error)
@@ -444,7 +444,7 @@ solution to find.
 Add a variable and give it an equation that says nothing:
 
 ```{code-cell} ipython3
-EMPTY = """
+SINGULAR_SYSTEM = """
 
 !transition-variables
     x, q
@@ -461,13 +461,13 @@ EMPTY = """
 
 """
 
-hollow = Simultaneous.from_string(EMPTY, linear=True, flat=True)
-hollow.assign_strict(rho=0.8)
-hollow.steady()
-hollow.solve_first_order()
+singular = Simultaneous.from_string(SINGULAR_SYSTEM, linear=True, flat=True)
+singular.assign_strict(rho=0.8)
+singular.steady()
+singular.solve_first_order()
 
-print("check_steady       :", hollow.check_steady(when_fails="silent"))
-print("variable stability :", hollow.get_variable_stability())
+print("check_steady       :", singular.check_steady(when_fails="silent"))
+print("variable stability :", singular.get_variable_stability())
 ```
 
 `True`, and `True` for both variables. Every check you have run so far says
@@ -477,7 +477,7 @@ nothing in the model determines it.
 The eigenvalues are the only place it shows:
 
 ```{code-cell} ipython3
-hollow.get_eigenvalues()
+singular.get_eigenvalues()
 ```
 
 **`nan`.** Not a large root, not a root at one — no root at all, because the
@@ -506,7 +506,7 @@ m.get_eigenvalues_stability()
  == len(m.get_eigenvalues()) - len(m.get_solution_vectors().transition_variables))
 
 # which variables are non-stationary — a different question
-walk.get_variable_stability()
+random_walk.get_variable_stability()
 ```
 
 ## Things to remember
