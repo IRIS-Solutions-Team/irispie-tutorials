@@ -303,7 +303,9 @@ except Exception as e:
 
 It writes out the anticipated-shock companions IrisPie generated for you, and
 `from_portable` generates them again on the way back in, so they collide. That
-happens for any model with shocks.
+happens for any model with shocks. The dictionary itself is sound — tutorial
+24 strips those entries and reloads it in a few lines — but `from_portable`
+on its own will not do it.
 
 **For saving and reloading, use pickle.** It keeps everything:
 
@@ -479,6 +481,7 @@ m.to_portable()["source"]["equations"][0]
    before.
 7. **`to_portable()` is for looking inside a model**, not for reloading it —
    `from_portable` cannot read back what it writes for a model with shocks.
+   Tutorial 24 works around it.
 8. **Save a solved model with pickle** and it comes back ready to simulate,
    solution and all.
 

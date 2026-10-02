@@ -273,6 +273,60 @@ this by pinning only the half you actually knew.
 **So: `exogenize` when you know both, `fix_level` when you know where a
 variable starts but not how fast it grows.**
 
+### fix_change, the half that does not work
+
+The obvious counterpart is `fix_change`: pin the growth rate and let the
+solver find the level. `SteadyPlan` has the method, and it cannot currently
+do that. The register it validates against holds the parameters rather than
+the variables, which is the same list `can_be_endogenized` returns:
+
+```{code-cell} ipython3
+gc = Simultaneous.from_string(GROWTH, linear=False, flat=False)
+gc.assign_strict(**CALIB)
+gc.assign(P=1.0)
+
+plannable = gc.get_steady_plannable()
+print("can_be_fixed_level :", plannable.can_be_fixed_level)
+print("can_be_fixed_change:", plannable.can_be_fixed_change)
+
+try:
+    SteadyPlan(gc).fix_change("P")
+except Exception as error:
+    print()
+    print("fix_change('P'):",
+          " ".join(str(error).replace("⏐", " ").split()))
+```
+
+Every variable is refused, so there is nothing whose change can be pinned.
+The names it does accept are parameters, and a parameter has no
+steady-state change to fix — so accepting one changes nothing:
+
+```{code-cell} ipython3
+def solve_growth(fix_change_name=None):
+    model = Simultaneous.from_string(GROWTH, linear=False, flat=False)
+    model.assign_strict(**CALIB)
+    model.assign(P=1.0)
+    plan = SteadyPlan(model)
+    plan.fix_level("P")
+    if fix_change_name:
+        plan.fix_change(fix_change_name)
+    model.steady(plan=plan)
+    return (round(float(model.get_steady_changes()["P"]), 8),
+            round(float(model.get_parameters()["pi_tar"]), 8))
+
+
+plain = solve_growth()
+fixed = solve_growth("pi_tar")
+print("fix_level only            :", plain)
+print("fix_level and fix_change  :", fixed)
+print("identical                 :", plain == fixed)
+```
+
+The call is accepted, the solve succeeds, and the answer is the same to
+eight decimal places. Until the register is corrected, impose a growth rate
+the way the rest of this tutorial imposes anything: assign the value you
+want and endogenize a parameter to pay for it.
+
 ## Seeing the structure inside the model
 
 Steady states are easier to solve when the equations are not all tangled
@@ -394,6 +448,10 @@ m.get_steady_plannable().can_be_endogenized
 # on a growing model: pin the level, let the growth rate solve
 #     plan.fix_level("P")
 
+# what each register will accept
+m.get_steady_plannable().can_be_fixed_level
+m.get_steady_plannable().can_be_fixed_change
+
 # see which equations are genuinely simultaneous
 r.steady(split_into_blocks=True)
 ```
@@ -410,7 +468,11 @@ r.steady(split_into_blocks=True)
    wrong one.
 5. **A growing model with no plan can collapse to zero**, and `check_steady()`
    will approve of it. `fix_level` is the fix.
-6. **`split_into_blocks=True` shows the recursive structure** and makes large
+6. **`fix_change` cannot pin a growth rate.** Its register holds the
+   parameters rather than the variables, so every variable is refused and
+   the parameters it accepts have no change to fix — passing one is a
+   silent no-op. Assign the growth rate and endogenize a parameter instead.
+7. **`split_into_blocks=True` shows the recursive structure** and makes large
    steady states solvable.
 
 ## Exercise
